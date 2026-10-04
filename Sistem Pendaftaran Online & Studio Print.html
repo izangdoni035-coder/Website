@@ -1,0 +1,881 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pendaftaran Online & Studio Print</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <!-- Fabric.js untuk Canvas Studio Ala Canva -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Montserrat:wght@400;700&family=Poppins:wght@400;600&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                        heading: ['Poppins', 'sans-serif'],
+                    },
+                    colors: {
+                        brand: {
+                            50: '#f0f9ff',
+                            100: '#e0f2fe',
+                            500: '#0284c7',
+                            600: '#0369a1',
+                            700: '#075985',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        /* Stylings for Canvas Container */
+        .canvas-container {
+            margin: 0 auto;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.1), 0 8px 10px -6px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+            overflow: hidden;
+            background: #ffffff;
+        }
+
+        /* Print Media Styling for Epson & Standard Printers */
+        @media print {
+            body * {
+                visibility: hidden;
+            }
+            #printArea, #printArea * {
+                visibility: visible;
+            }
+            #printArea {
+                position: absolute;
+                left: 0;
+                top: 0;
+                width: 100%;
+                height: 100%;
+                display: flex;
+                justify-content: center;
+                align-items: center;
+                background: white !important;
+            }
+            #printArea img {
+                max-width: 100%;
+                max-height: 100vh;
+                object-fit: contain;
+            }
+            @page {
+                size: auto;
+                margin: 0mm;
+            }
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 6px;
+            height: 6px;
+        }
+        ::-webkit-scrollbar-track {
+            background: #f1f1f1;
+        }
+        ::-webkit-scrollbar-thumb {
+            background: #cbd5e1;
+            border-radius: 4px;
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: #94a3b8;
+        }
+    </style>
+</head>
+<body class="bg-slate-50 text-slate-800 font-sans min-h-screen flex flex-col antialiased">
+
+    <!-- Header / Navbar -->
+    <header class="bg-white border-b border-slate-200 sticky top-0 z-30 shadow-sm">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between items-center h-16">
+                <!-- Logo -->
+                <div class="flex items-center space-x-3 cursor-pointer" onclick="switchTab('user')">
+                    <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-sky-600 to-indigo-600 flex items-center justify-center text-white shadow-md">
+                        <i data-lucide="printer" class="w-6 h-6"></i>
+                    </div>
+                    <div>
+                        <h1 class="font-heading font-bold text-lg leading-tight text-slate-800">EpsPrint Registration</h1>
+                        <p class="text-xs text-slate-500">Sistem Pendaftaran & Studio Cetak</p>
+                    </div>
+                </div>
+
+                <!-- Navigation Tabs -->
+                <nav class="flex items-center space-x-1 sm:space-x-2">
+                    <button id="nav-user" onclick="switchTab('user')" class="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-sky-50 text-sky-700 shadow-sm">
+                        <i data-lucide="user-plus" class="w-4 h-4"></i>
+                        <span>Pendaftaran</span>
+                    </button>
+                    <button id="nav-admin" onclick="openAdminAccess()" class="flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-600 hover:bg-slate-100">
+                        <i data-lucide="shield-check" class="w-4 h-4"></i>
+                        <span>Panel Admin</span>
+                    </button>
+                </nav>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Content Container -->
+    <main class="flex-grow max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-6">
+
+        <!-- PANEL PENDAFTARAN (USER) -->
+        <section id="panel-user" class="space-y-6">
+            <div class="max-w-2xl mx-auto bg-white rounded-2xl shadow-sm border border-slate-200 p-6 sm:p-8">
+                <div class="mb-6 border-b border-slate-100 pb-4">
+                    <h2 class="text-2xl font-heading font-bold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="file-text" class="text-sky-600"></i> Form Pendaftaran Online
+                    </h2>
+                    <p class="text-slate-500 text-sm mt-1">Isi formulir di bawah ini dengan lengkap untuk mendapatkan antrian layanan.</p>
+                </div>
+
+                <form id="formPendaftaran" onsubmit="handleRegistration(event)" class="space-y-5">
+                    <!-- Nama Lengkap -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nama Lengkap <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="user" class="w-5 h-5"></i>
+                            </span>
+                            <input type="text" id="regNama" required placeholder="Contoh: Budi Santoso" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition">
+                        </div>
+                    </div>
+
+                    <!-- No Order -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Nomor Order (Isi Manual) <span class="text-red-500">*</span></label>
+                        <div class="relative">
+                            <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                                <i data-lucide="hash" class="w-5 h-5"></i>
+                            </span>
+                            <input type="text" id="regNoOrder" required placeholder="Contoh: ORD-2026-001" class="w-full pl-10 pr-4 py-2.5 bg-slate-50 border border-slate-300 rounded-lg focus:ring-2 focus:ring-sky-500 focus:bg-white focus:outline-none transition">
+                        </div>
+                    </div>
+
+                    <!-- Upload File Dokumen -->
+                    <div>
+                        <label class="block text-sm font-semibold text-slate-700 mb-1">Upload File Dokumen / Foto <span class="text-red-500">*</span></label>
+                        <div class="mt-1 flex justify-center px-6 pt-5 pb-6 border-2 border-slate-300 border-dashed rounded-xl hover:border-sky-500 transition bg-slate-50/50 relative group">
+                            <div class="space-y-2 text-center">
+                                <div id="previewContainer" class="hidden mb-3 flex justify-center">
+                                    <img id="filePreview" class="max-h-40 rounded-lg shadow-sm border border-slate-200" src="" alt="Preview">
+                                </div>
+                                <div id="uploadIcon" class="mx-auto h-12 w-12 text-slate-400 group-hover:text-sky-500 transition flex items-center justify-center rounded-full bg-white shadow-sm">
+                                    <i data-lucide="upload-cloud" class="w-6 h-6"></i>
+                                </div>
+                                <div class="text-sm text-slate-600">
+                                    <label for="regDokumen" class="relative cursor-pointer bg-white rounded-md font-medium text-sky-600 hover:text-sky-500 focus-within:outline-none">
+                                        <span>Pilih file</span>
+                                        <input id="regDokumen" name="regDokumen" type="file" accept="image/*" required class="sr-only" onchange="handleFileSelect(event)">
+                                    </label>
+                                    <p class="pl-1 inline">atau tarik file ke sini</p>
+                                </div>
+                                <p id="fileName" class="text-xs text-slate-500">PNG, JPG, WEBP hingga 5MB</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <button type="submit" class="w-full py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white font-semibold rounded-lg shadow-md hover:shadow-lg transition-all duration-200 flex items-center justify-center space-x-2">
+                        <i data-lucide="send" class="w-5 h-5"></i>
+                        <span>Daftar Sekarang</span>
+                    </button>
+                </form>
+            </div>
+        </section>
+
+        <!-- PANEL ADMIN (ADMIN) -->
+        <section id="panel-admin" class="hidden space-y-6">
+            <!-- Header Admin & Navigation Sub-Tabs -->
+            <div class="bg-white p-4 rounded-xl border border-slate-200 flex flex-wrap items-center justify-between gap-4 shadow-sm">
+                <div class="flex items-center gap-3">
+                    <span class="p-2 bg-emerald-100 text-emerald-700 rounded-lg">
+                        <i data-lucide="shield" class="w-5 h-5"></i>
+                    </span>
+                    <div>
+                        <h2 class="font-heading font-bold text-slate-800">Panel Administrator</h2>
+                        <p class="text-xs text-slate-500">Kelola antrian pendaftaran & studio cetak</p>
+                    </div>
+                </div>
+
+                <div class="flex items-center space-x-1 bg-slate-100 p-1 rounded-lg">
+                    <button id="tab-antrian" onclick="switchAdminSubTab('antrian')" class="px-4 py-2 rounded-md text-sm font-medium transition bg-white text-slate-800 shadow-sm">
+                        Antrian Aktif
+                    </button>
+                    <button id="tab-riwayat" onclick="switchAdminSubTab('riwayat')" class="px-4 py-2 rounded-md text-sm font-medium transition text-slate-600 hover:text-slate-800">
+                        Riwayat Antrian
+                    </button>
+                    <button id="tab-studio" onclick="switchAdminSubTab('studio')" class="px-4 py-2 rounded-md text-sm font-medium transition text-slate-600 hover:text-slate-800 flex items-center gap-1.5">
+                        <i data-lucide="palette" class="w-4 h-4 text-sky-600"></i> Studio Canva
+                    </button>
+                </div>
+            </div>
+
+            <!-- Sub Tab 1: Antrian Aktif -->
+            <div id="subtab-antrian-content" class="bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <h3 class="font-heading font-semibold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="list-ordered" class="w-5 h-5 text-sky-600"></i> Daftar Antrian Aktif
+                    </h3>
+                    <span id="badgeAntrianCount" class="px-3 py-1 bg-sky-100 text-sky-800 text-xs font-medium rounded-full">0 Pendaftar</span>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                                <th class="p-4">No</th>
+                                <th class="p-4">No Order</th>
+                                <th class="p-4">Nama Lengkap</th>
+                                <th class="p-4">Dokumen</th>
+                                <th class="p-4">Waktu</th>
+                                <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listAntrian" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub Tab 2: Riwayat Antrian -->
+            <div id="subtab-riwayat-content" class="hidden bg-white rounded-xl border border-slate-200 shadow-sm overflow-hidden">
+                <div class="p-5 border-b border-slate-100 flex flex-wrap justify-between items-center gap-4">
+                    <h3 class="font-heading font-semibold text-slate-800 flex items-center gap-2">
+                        <i data-lucide="history" class="w-5 h-5 text-emerald-600"></i> Riwayat Pendaftaran Selesai
+                    </h3>
+                    <div class="relative w-full sm:w-64">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-slate-400">
+                            <i data-lucide="search" class="w-4 h-4"></i>
+                        </span>
+                        <input type="text" id="searchRiwayat" onkeyup="renderRiwayat()" placeholder="Cari Nama / No Order..." class="w-full pl-9 pr-3 py-1.5 bg-slate-50 border border-slate-300 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-sky-500">
+                    </div>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-slate-50 border-b border-slate-200 text-xs text-slate-500 uppercase tracking-wider">
+                                <th class="p-4">No</th>
+                                <th class="p-4">No Order</th>
+                                <th class="p-4">Nama Lengkap</th>
+                                <th class="p-4">Waktu Daftar</th>
+                                <th class="p-4">Status</th>
+                                <th class="p-4 text-center">Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody id="listRiwayat" class="divide-y divide-slate-100 text-sm text-slate-700">
+                            <!-- Populated via JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Sub Tab 3: Studio Desain Ala Canva -->
+            <div id="subtab-studio-content" class="hidden space-y-4">
+                <!-- Studio Toolbar Header -->
+                <div class="bg-white p-3 rounded-xl border border-slate-200 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                    <div class="flex items-center space-x-2">
+                        <label class="text-xs font-semibold text-slate-600">Ukuran Kertas:</label>
+                        <select id="paperSize" onchange="changePaperSize()" class="bg-slate-50 border border-slate-300 text-slate-700 text-sm rounded-lg p-1.5 focus:outline-none focus:ring-2 focus:ring-sky-500">
+                            <option value="A4">A4 (210 x 297 mm)</option>
+                            <option value="A5">A5 (148 x 210 mm)</option>
+                            <option value="IDCard">Kartu / ID Card (85 x 54 mm)</option>
+                            <option value="EpsonLabel">Label Epson Thermal (80 x 50 mm)</option>
+                        </select>
+                    </div>
+
+                    <div class="flex items-center space-x-2">
+                        <button onclick="clearCanvas()" class="px-3 py-1.5 text-xs font-medium text-red-600 bg-red-50 hover:bg-red-100 border border-red-200 rounded-lg flex items-center gap-1">
+                            <i data-lucide="trash-2" class="w-3.5 h-3.5"></i> Reset Canvas
+                        </button>
+                        <button onclick="printCanvas()" class="px-4 py-1.5 text-sm font-semibold text-white bg-emerald-600 hover:bg-emerald-700 rounded-lg shadow-sm flex items-center gap-1.5 transition">
+                            <i data-lucide="printer" class="w-4 h-4"></i> Cetak (Epson/Printer)
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Studio Work Area -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <!-- Sidebar Control Controls (Tools) -->
+                    <div class="lg:col-span-3 bg-white p-4 rounded-xl border border-slate-200 shadow-sm space-y-5 h-fit">
+                        <div>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-3">Tambah Element</h4>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button onclick="addText()" class="p-2.5 bg-slate-50 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium flex flex-col items-center gap-1 transition">
+                                    <i data-lucide="type" class="w-5 h-5"></i> Teks
+                                </button>
+                                <button onclick="addRect()" class="p-2.5 bg-slate-50 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium flex flex-col items-center gap-1 transition">
+                                    <i data-lucide="square" class="w-5 h-5"></i> Persegi
+                                </button>
+                                <button onclick="addCircle()" class="p-2.5 bg-slate-50 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium flex flex-col items-center gap-1 transition">
+                                    <i data-lucide="circle" class="w-5 h-5"></i> Lingkaran
+                                </button>
+                                <button onclick="addBarcodeDummy()" class="p-2.5 bg-slate-50 hover:bg-sky-50 hover:text-sky-700 border border-slate-200 rounded-lg text-xs font-medium flex flex-col items-center gap-1 transition">
+                                    <i data-lucide="qr-code" class="w-5 h-5"></i> QR / Barcode
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Template Cepat -->
+                        <div>
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">Template Otomatis</h4>
+                            <div class="space-y-2">
+                                <button onclick="applyTemplateIDCard()" class="w-full text-left px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium flex items-center justify-between text-slate-700">
+                                    <span>Template KTA / Kartu Order</span>
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                                </button>
+                                <button onclick="applyTemplateSticker()" class="w-full text-left px-3 py-2 bg-slate-50 hover:bg-slate-100 rounded-lg border border-slate-200 text-xs font-medium flex items-center justify-between text-slate-700">
+                                    <span>Template Label Pengiriman</span>
+                                    <i data-lucide="chevron-right" class="w-4 h-4 text-slate-400"></i>
+                                </button>
+                            </div>
+                        </div>
+
+                        <!-- Pengaturan Objek Terpilih -->
+                        <div id="objectProperties" class="border-t border-slate-200 pt-4 space-y-3">
+                            <h4 class="text-xs font-bold uppercase tracking-wider text-slate-400">Properti Objek</h4>
+                            
+                            <div>
+                                <label class="block text-xs text-slate-500 mb-1">Warna Isi / Teks</label>
+                                <input type="color" id="objColor" onchange="updateObjectColor(this.value)" class="w-full h-8 p-0 border-0 rounded cursor-pointer">
+                            </div>
+
+                            <div class="flex gap-2">
+                                <button onclick="deleteActiveObject()" class="flex-1 py-1.5 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-semibold rounded-md transition flex items-center justify-center gap-1">
+                                    <i data-lucide="trash" class="w-3.5 h-3.5"></i> Hapus Objek
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Interactive Canvas Area -->
+                    <div class="lg:col-span-9 bg-slate-200 p-4 sm:p-8 rounded-xl border border-slate-300 flex items-center justify-center overflow-auto min-h-[500px]">
+                        <div class="bg-white p-2 rounded shadow-2xl">
+                            <canvas id="canvaStudio"></canvas>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Modal Admin Password Protection -->
+    <div id="modalPassword" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center hidden p-4">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 shadow-2xl border border-slate-100 space-y-5 animate-in fade-in duration-200">
+            <div class="text-center">
+                <div class="w-12 h-12 bg-amber-100 text-amber-600 rounded-full flex items-center justify-center mx-auto mb-3">
+                    <i data-lucide="lock" class="w-6 h-6"></i>
+                </div>
+                <h3 class="text-xl font-heading font-bold text-slate-800">Akses Admin Dilindungi</h3>
+                <p class="text-xs text-slate-500 mt-1">Masukkan password admin untuk melanjutkan.</p>
+            </div>
+
+            <form onsubmit="verifyAdminPassword(event)" class="space-y-4">
+                <div>
+                    <input type="password" id="inputPassword" placeholder="Sandi (Default: 123456)" required class="w-full px-4 py-2.5 border border-slate-300 rounded-lg text-center font-mono text-lg focus:ring-2 focus:ring-sky-500 focus:outline-none">
+                </div>
+                <div class="flex gap-2">
+                    <button type="button" onclick="closeAdminModal()" class="w-1/2 py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-medium rounded-lg text-sm transition">
+                        Batal
+                    </button>
+                    <button type="submit" class="w-1/2 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-medium rounded-lg text-sm shadow transition">
+                        Masuk
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Hidden Print Container -->
+    <div id="printArea"></div>
+
+    <script>
+        // Data State Variables
+        let antrianData = JSON.parse(localStorage.getItem('eps_antrian')) || [];
+        let riwayatData = JSON.parse(localStorage.getItem('eps_riwayat')) || [];
+        let isAdminLoggedIn = false;
+        let selectedFileBase64 = null;
+        let fabricCanvas = null;
+
+        // Initialize icons and application on load
+        window.onload = function() {
+            lucide.createIcons();
+            initFabricCanvas();
+            renderAntrian();
+            renderRiwayat();
+        };
+
+        // Switch Main Tabs (User vs Admin)
+        function switchTab(tab) {
+            const panelUser = document.getElementById('panel-user');
+            const panelAdmin = document.getElementById('panel-admin');
+            const navUser = document.getElementById('nav-user');
+            const navAdmin = document.getElementById('nav-admin');
+
+            if (tab === 'user') {
+                panelUser.classList.remove('hidden');
+                panelAdmin.classList.add('hidden');
+                navUser.className = "flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-sky-50 text-sky-700 shadow-sm";
+                navAdmin.className = "flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-600 hover:bg-slate-100";
+            } else if (tab === 'admin') {
+                panelUser.classList.add('hidden');
+                panelAdmin.classList.remove('hidden');
+                navAdmin.className = "flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 bg-sky-50 text-sky-700 shadow-sm";
+                navUser.className = "flex items-center space-x-2 px-3 sm:px-4 py-2 rounded-lg text-sm font-medium transition-all duration-200 text-slate-600 hover:bg-slate-100";
+            }
+        }
+
+        // Admin Access Guard with Password "123456"
+        function openAdminAccess() {
+            if (isAdminLoggedIn) {
+                switchTab('admin');
+            } else {
+                document.getElementById('modalPassword').classList.remove('hidden');
+            }
+        }
+
+        function closeAdminModal() {
+            document.getElementById('modalPassword').classList.add('hidden');
+        }
+
+        function verifyAdminPassword(e) {
+            e.preventDefault();
+            const pass = document.getElementById('inputPassword').value;
+            if (pass === "123456") {
+                isAdminLoggedIn = true;
+                closeAdminModal();
+                switchTab('admin');
+                document.getElementById('inputPassword').value = '';
+            } else {
+                alert("Sandi Admin salah! Silahkan coba lagi.");
+            }
+        }
+
+        // Switch Admin Sub-tabs
+        function switchAdminSubTab(subTab) {
+            const tabs = ['antrian', 'riwayat', 'studio'];
+            tabs.forEach(t => {
+                const btn = document.getElementById(`tab-${t}`);
+                const content = document.getElementById(`subtab-${t}-content`);
+                if (t === subTab) {
+                    btn.className = "px-4 py-2 rounded-md text-sm font-medium transition bg-white text-slate-800 shadow-sm";
+                    content.classList.remove('hidden');
+                } else {
+                    btn.className = "px-4 py-2 rounded-md text-sm font-medium transition text-slate-600 hover:text-slate-800";
+                    content.classList.add('hidden');
+                }
+            });
+
+            if (subTab === 'studio') {
+                setTimeout(() => {
+                    fabricCanvas.calcOffset();
+                    fabricCanvas.renderAll();
+                }, 100);
+            }
+        }
+
+        // Handle File Selection and Convert to Base64
+        function handleFileSelect(e) {
+            const file = e.target.files[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = function(event) {
+                    selectedFileBase64 = event.target.result;
+                    document.getElementById('filePreview').src = selectedFileBase64;
+                    document.getElementById('previewContainer').classList.remove('hidden');
+                    document.getElementById('uploadIcon').classList.add('hidden');
+                    document.getElementById('fileName').innerText = file.name;
+                };
+                reader.readAsDataURL(file);
+            }
+        }
+
+        // Handle Form Registration Submission
+        function handleRegistration(e) {
+            e.preventDefault();
+            const nama = document.getElementById('regNama').value.trim();
+            const noOrder = document.getElementById('regNoOrder').value.trim();
+
+            if (!selectedFileBase64) {
+                alert("Silakan unggah dokumen terlebih dahulu.");
+                return;
+            }
+
+            const newRegistration = {
+                id: Date.now(),
+                nama: nama,
+                noOrder: noOrder,
+                file: selectedFileBase64,
+                waktu: new Date().toLocaleString('id-ID'),
+                status: 'Menunggu'
+            };
+
+            antrianData.push(newRegistration);
+            localStorage.setItem('eps_antrian', JSON.stringify(antrianData));
+
+            // Reset Form
+            document.getElementById('formPendaftaran').reset();
+            document.getElementById('previewContainer').classList.add('hidden');
+            document.getElementById('uploadIcon').classList.remove('hidden');
+            document.getElementById('fileName').innerText = 'PNG, JPG, WEBP hingga 5MB';
+            selectedFileBase64 = null;
+
+            alert('Pendaftaran Berhasil! Data Anda telah masuk ke dalam Antrian.');
+            renderAntrian();
+        }
+
+        // Render Active Queue Table
+        function renderAntrian() {
+            const tbody = document.getElementById('listAntrian');
+            document.getElementById('badgeAntrianCount').innerText = `${antrianData.length} Pendaftar`;
+            tbody.innerHTML = '';
+
+            if (antrianData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada antrian aktif.</td></tr>`;
+                return;
+            }
+
+            antrianData.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-medium">${index + 1}</td>
+                    <td class="p-4 font-mono font-semibold text-sky-600">${item.noOrder}</td>
+                    <td class="p-4 font-medium">${item.nama}</td>
+                    <td class="p-4">
+                        <img src="${item.file}" class="w-10 h-10 object-cover rounded border border-slate-200 cursor-pointer hover:scale-105 transition" onclick="window.open('${item.file}')">
+                    </td>
+                    <td class="p-4 text-xs text-slate-500">${item.waktu}</td>
+                    <td class="p-4 text-center">
+                        <div class="flex items-center justify-center space-x-2">
+                            <button onclick="editInStudio(${item.id})" class="px-2.5 py-1.5 bg-sky-100 hover:bg-sky-200 text-sky-700 text-xs font-semibold rounded-md flex items-center gap-1 transition" title="Buka di Studio">
+                                <i data-lucide="palette" class="w-3.5 h-3.5"></i> Studio
+                            </button>
+                            <button onclick="markAsCompleted(${item.id})" class="px-2.5 py-1.5 bg-emerald-100 hover:bg-emerald-200 text-emerald-700 text-xs font-semibold rounded-md flex items-center gap-1 transition" title="Tandai Selesai">
+                                <i data-lucide="check-circle" class="w-3.5 h-3.5"></i> Selesai
+                            </button>
+                            <button onclick="deleteAntrian(${item.id})" class="p-1.5 bg-red-50 hover:bg-red-100 text-red-600 rounded-md transition" title="Hapus">
+                                <i data-lucide="trash-2" class="w-4 h-4"></i>
+                            </button>
+                        </div>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // Render History Table
+        function renderRiwayat() {
+            const tbody = document.getElementById('listRiwayat');
+            const keyword = document.getElementById('searchRiwayat').value.toLowerCase();
+            tbody.innerHTML = '';
+
+            const filtered = riwayatData.filter(item => 
+                item.nama.toLowerCase().includes(keyword) || 
+                item.noOrder.toLowerCase().includes(keyword)
+            );
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="6" class="p-6 text-center text-slate-400">Tidak ada riwayat pendaftaran.</td></tr>`;
+                return;
+            }
+
+            filtered.forEach((item, index) => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-slate-50 transition";
+                tr.innerHTML = `
+                    <td class="p-4 font-medium">${index + 1}</td>
+                    <td class="p-4 font-mono font-semibold text-slate-600">${item.noOrder}</td>
+                    <td class="p-4 font-medium">${item.nama}</td>
+                    <td class="p-4 text-xs text-slate-500">${item.waktu}</td>
+                    <td class="p-4"><span class="px-2.5 py-1 bg-emerald-100 text-emerald-800 text-xs font-medium rounded-full">Selesai</span></td>
+                    <td class="p-4 text-center">
+                        <button onclick="deleteRiwayat(${item.id})" class="p-1.5 bg-slate-100 hover:bg-red-100 hover:text-red-600 text-slate-500 rounded-md transition">
+                            <i data-lucide="trash" class="w-4 h-4"></i>
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+            lucide.createIcons();
+        }
+
+        // Action Handlers
+        function markAsCompleted(id) {
+            const index = antrianData.findIndex(item => item.id === id);
+            if (index !== -1) {
+                const item = antrianData.splice(index, 1)[0];
+                item.status = 'Selesai';
+                riwayatData.unshift(item);
+                localStorage.setItem('eps_antrian', JSON.stringify(antrianData));
+                localStorage.setItem('eps_riwayat', JSON.stringify(riwayatData));
+                renderAntrian();
+                renderRiwayat();
+            }
+        }
+
+        function deleteAntrian(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus antrian ini?')) {
+                antrianData = antrianData.filter(item => item.id !== id);
+                localStorage.setItem('eps_antrian', JSON.stringify(antrianData));
+                renderAntrian();
+            }
+        }
+
+        function deleteRiwayat(id) {
+            if (confirm('Apakah Anda yakin ingin menghapus riwayat ini?')) {
+                riwayatData = riwayatData.filter(item => item.id !== id);
+                localStorage.setItem('eps_riwayat', JSON.stringify(riwayatData));
+                renderRiwayat();
+            }
+        }
+
+        // Fabric.js Canvas Initialization
+        function initFabricCanvas() {
+            fabricCanvas = new fabric.Canvas('canvaStudio', {
+                width: 400,
+                height: 550,
+                backgroundColor: '#ffffff'
+            });
+
+            // Color picker updates active object
+            fabricCanvas.on('selection:created', updateControls);
+            fabricCanvas.on('selection:updated', updateControls);
+        }
+
+        function updateControls() {
+            const activeObj = fabricCanvas.getActiveObject();
+            if (activeObj && activeObj.fill) {
+                document.getElementById('objColor').value = activeObj.fill;
+            }
+        }
+
+        // Paper Dimensions Handler
+        function changePaperSize() {
+            const size = document.getElementById('paperSize').value;
+            let width = 400, height = 550;
+
+            if (size === 'A4') {
+                width = 500; height = 700;
+            } else if (size === 'A5') {
+                width = 400; height = 560;
+            } else if (size === 'IDCard') {
+                width = 420; height = 260;
+            } else if (size === 'EpsonLabel') {
+                width = 380; height = 240;
+            }
+
+            fabricCanvas.setWidth(width);
+            fabricCanvas.setHeight(height);
+            fabricCanvas.renderAll();
+        }
+
+        // Add Design Elements
+        function addText(customText = 'Teks Baru') {
+            const text = new fabric.Textbox(customText, {
+                left: 50,
+                top: 50,
+                fontSize: 20,
+                fill: '#1e293b',
+                fontFamily: 'Inter'
+            });
+            fabricCanvas.add(text);
+            fabricCanvas.setActiveObject(text);
+        }
+
+        function addRect() {
+            const rect = new fabric.Rect({
+                left: 60,
+                top: 60,
+                fill: '#0284c7',
+                width: 100,
+                height: 80,
+                rx: 6,
+                ry: 6
+            });
+            fabricCanvas.add(rect);
+        }
+
+        function addCircle() {
+            const circle = new fabric.Circle({
+                left: 80,
+                top: 80,
+                fill: '#10b981',
+                radius: 40
+            });
+            fabricCanvas.add(circle);
+        }
+
+        function addBarcodeDummy() {
+            fabric.Image.fromURL('https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=ORDER-DEMO', function(img) {
+                img.set({
+                    left: 100,
+                    top: 100,
+                    scaleX: 0.7,
+                    scaleY: 0.7
+                });
+                fabricCanvas.add(img);
+            });
+        }
+
+        function updateObjectColor(color) {
+            const activeObj = fabricCanvas.getActiveObject();
+            if (activeObj) {
+                activeObj.set('fill', color);
+                fabricCanvas.renderAll();
+            }
+        }
+
+        function deleteActiveObject() {
+            const activeObj = fabricCanvas.getActiveObject();
+            if (activeObj) {
+                fabricCanvas.remove(activeObj);
+            }
+        }
+
+        function clearCanvas() {
+            if (confirm('Bersihkan seluruh area canvas?')) {
+                fabricCanvas.clear();
+                fabricCanvas.setBackgroundColor('#ffffff', fabricCanvas.renderAll.bind(fabricCanvas));
+            }
+        }
+
+        // Edit Item from Queue in Studio
+        function editInStudio(id) {
+            const item = antrianData.find(i => i.id === id);
+            if (!item) return;
+
+            switchAdminSubTab('studio');
+            fabricCanvas.clear();
+            fabricCanvas.setBackgroundColor('#ffffff', fabricCanvas.renderAll.bind(fabricCanvas));
+
+            // Set Template Background Card
+            const headerRect = new fabric.Rect({
+                left: 0,
+                top: 0,
+                fill: '#0369a1',
+                width: fabricCanvas.width,
+                height: 70,
+                selectable: false
+            });
+            fabricCanvas.add(headerRect);
+
+            const title = new fabric.Text("KARTU PENDAFTARAN", {
+                left: 20,
+                top: 22,
+                fontSize: 18,
+                fontWeight: 'bold',
+                fill: '#ffffff',
+                fontFamily: 'Poppins'
+            });
+            fabricCanvas.add(title);
+
+            // Add Text Details
+            const textNama = new fabric.Textbox(`Nama: ${item.nama}`, {
+                left: 20,
+                top: 90,
+                fontSize: 16,
+                fontWeight: 'bold',
+                fill: '#1e293b'
+            });
+
+            const textOrder = new fabric.Textbox(`No Order: ${item.noOrder}`, {
+                left: 20,
+                top: 125,
+                fontSize: 14,
+                fill: '#475569'
+            });
+
+            fabricCanvas.add(textNama);
+            fabricCanvas.add(textOrder);
+
+            // Add Uploaded Document Image to Canvas
+            if (item.file) {
+                fabric.Image.fromURL(item.file, function(img) {
+                    img.scaleToWidth(180);
+                    img.set({
+                        left: 20,
+                        top: 160,
+                        stroke: '#cbd5e1',
+                        strokeWidth: 1
+                    });
+                    fabricCanvas.add(img);
+                });
+            }
+
+            // Add QR Code for Epson/POS Scanner
+            const qrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(item.noOrder)}`;
+            fabric.Image.fromURL(qrUrl, function(img) {
+                img.scaleToWidth(100);
+                img.set({
+                    left: 240,
+                    top: 160
+                });
+                fabricCanvas.add(img);
+            });
+        }
+
+        // Apply Preset Canvas Templates
+        function applyTemplateIDCard() {
+            document.getElementById('paperSize').value = 'IDCard';
+            changePaperSize();
+            fabricCanvas.clear();
+            fabricCanvas.setBackgroundColor('#ffffff', fabricCanvas.renderAll.bind(fabricCanvas));
+
+            const header = new fabric.Rect({
+                left: 0, top: 0, fill: '#0f172a', width: 420, height: 50, selectable: false
+            });
+            const name = new fabric.Textbox('NAMA LENGKAP', {
+                left: 20, top: 70, fontSize: 16, fontWeight: 'bold'
+            });
+            const sub = new fabric.Textbox('NO ORDER: ORD-000', {
+                left: 20, top: 100, fontSize: 12, fill: '#64748b'
+            });
+
+            fabricCanvas.add(header, name, sub);
+        }
+
+        function applyTemplateSticker() {
+            document.getElementById('paperSize').value = 'EpsonLabel';
+            changePaperSize();
+            fabricCanvas.clear();
+            fabricCanvas.setBackgroundColor('#ffffff', fabricCanvas.renderAll.bind(fabricCanvas));
+
+            const border = new fabric.Rect({
+                left: 5, top: 5, width: 370, height: 230, fill: 'transparent', stroke: '#000000', strokeWidth: 2
+            });
+            const title = new fabric.Text('LABEL EPSON PRINT', {
+                left: 20, top: 20, fontSize: 14, fontWeight: 'bold'
+            });
+
+            fabricCanvas.add(border, title);
+        }
+
+        // High-Quality Print Studio Function for Epson Printers
+        function printCanvas() {
+            fabricCanvas.discardActiveObject();
+            fabricCanvas.renderAll();
+
+            const dataUrl = fabricCanvas.toDataURL({
+                format: 'png',
+                multiplier: 3 // High resolution print output
+            });
+
+            const printArea = document.getElementById('printArea');
+            printArea.innerHTML = `<img src="${dataUrl}">`;
+
+            setTimeout(() => {
+                window.print();
+            }, 300);
+        }
+    </script>
+</body>
+</html>
